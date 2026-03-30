@@ -22,6 +22,102 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""
+<style>
+    /* Main container */
+    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
+    
+    /* Metric cards */
+    [data-testid="metric-container"] {
+        background-color: #FFFFFF;
+        border: 1px solid #E0E0E0;
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    [data-testid="metric-container"] label {
+        color: #666666 !important;
+        font-size: 11px !important;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+    [data-testid="metric-container"] [data-testid="stMetricValue"] {
+        color: #1A1A1A !important;
+        font-size: 22px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #F8F9FA;
+        border-radius: 12px;
+        padding: 4px;
+        gap: 4px;
+        border: 1px solid #E0E0E0;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        color: #666666;
+        font-weight: 500;
+        padding: 8px 16px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #1565C0 !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #F8F9FA;
+        border-right: 1px solid #E0E0E0;
+    }
+    [data-testid="stSidebar"] .stMarkdown h2 {
+        color: #1A1A1A;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    /* Buttons */
+    .stButton button {
+        background-color: #1565C0;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 10px 24px;
+        transition: background-color 0.2s;
+    }
+    .stButton button:hover {
+        background-color: #1976D2;
+        border: none;
+    }
+
+    /* Input fields */
+    .stTextInput input, .stNumberInput input {
+        background-color: #FFFFFF;
+        border: 1px solid #E0E0E0;
+        border-radius: 8px;
+        color: #1A1A1A;
+    }
+
+    /* Divider */
+    hr { border-color: #E0E0E0; }
+
+    /* Section headers */
+    .section-header {
+        font-size: 12px;
+        font-weight: 600;
+        color: #666666;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #E0E0E0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("📈 Portfolio Risk Analyser")
 st.markdown("*Quantitative risk analysis using VaR, Monte Carlo simulation, stress testing and hedge analysis*")
 st.divider()
