@@ -8,8 +8,14 @@ def fetch_data(tickers, start, end):
         tickers = [tickers]
     data = yf.download(tickers, start=start, end=end, progress=False)
     if len(tickers) == 1:
-        return data[["Close"]].rename(columns={"Close": tickers[0]})
-    return data["Close"]
+        close = data["Close"]
+        if isinstance(close, pd.DataFrame):
+            close = close.squeeze()
+        return pd.DataFrame({tickers[0]: close})
+    close = data["Close"]
+    close.columns = [col[0] if isinstance(col, tuple) else col 
+                     for col in close.columns]
+    return close
 
 def compute_returns(price_df):
     return price_df.pct_change().dropna()
@@ -17,9 +23,24 @@ def compute_returns(price_df):
 def compute_portfolio_returns(returns_df, amounts):
     total = sum(amounts.values())
     weights = {ticker: amount / total for ticker, amount in amounts.items()}
-    weight_series = pd.Series(weights)
-    aligned_returns = returns_df[weight_series.index]
-    return (aligned_returns * weight_series).sum(axis=1), weights
+    
+    if isinstance(returns_df, pd.Series):
+        return returns_df, weights
+    
+    returns_df = returns_df.copy()
+    returns_df.columns = [col[0] if isinstance(col, tuple) else col 
+                          for col in returns_df.columns]
+    
+    available = [t for t in weights.keys() if t in returns_df.columns]
+    returns_df = returns_df[available].dropna()
+    
+    portfolio_ret = sum(
+        returns_df[ticker] * weight 
+        for ticker, weight in weights.items() 
+        if ticker in returns_df.columns
+    )
+    
+    return portfolio_ret, weights
 
 def historical_var(returns, confidence=0.99):
     returns = returns.dropna()
