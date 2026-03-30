@@ -49,9 +49,14 @@ with st.sidebar:
 
     col1, col2 = st.columns(2)
     with col1:
-        start_date = st.date_input("Start date", value=pd.to_datetime("2020-01-01"))
+        start_date = st.date_input("Start date", value=pd.to_datetime("2020-01-01"),
+                               max_value=pd.Timestamp.today())
     with col2:
-        end_date = st.date_input("End date", value=pd.to_datetime("2024-01-01"))
+        end_date = st.date_input("End date", value=pd.to_datetime("2024-01-01"),
+                             max_value=pd.Timestamp.today())
+    if start_date >= end_date:
+        st.sidebar.error("Start date must be before end date.")
+        st.stop()
 
     var_limit = st.number_input("VaR limit (£)", min_value=100, max_value=100000, value=300, step=100)
 

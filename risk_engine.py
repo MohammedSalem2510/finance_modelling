@@ -18,7 +18,7 @@ def fetch_data(tickers, start, end):
     return close
 
 def compute_returns(price_df):
-    return price_df.pct_change().dropna()
+    return price_df.pct_change(fill_method=None).dropna()
 
 def compute_portfolio_returns(returns_df, amounts):
     total = sum(amounts.values())
