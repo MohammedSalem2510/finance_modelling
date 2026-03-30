@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
+import matplotlib.pyplot as plt
+import numpy as np
 from risk_engine import historical_var, t_var
 
 
@@ -22,7 +24,6 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
                 position_value = amounts[ticker]
                 position_shares = position_value / current_price
                 position_pnl = position_value - (position_shares * float(price_data[ticker].iloc[0]))
-
                 position_rows.append({
                     "Ticker": ticker,
                     "Price": f"£{current_price:,.2f}",
@@ -43,15 +44,10 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
         if len(tickers) > 1:
             st.markdown('<div class="card-title">Asset Correlation</div>', unsafe_allow_html=True)
             corr_matrix = returns_df.corr()
-
-            import matplotlib.pyplot as plt
-            import numpy as np
-
             plt.style.use("seaborn-v0_8-whitegrid")
             fig, ax = plt.subplots(figsize=(6, 4))
             fig.patch.set_facecolor("white")
             ax.set_facecolor("white")
-
             instruments = list(corr_matrix.columns)
             im = ax.imshow(corr_matrix, cmap="RdYlGn", vmin=-1, vmax=1)
             plt.colorbar(im, ax=ax)
@@ -74,24 +70,18 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
 
         else:
             st.markdown('<div class="card-title">Daily Returns</div>', unsafe_allow_html=True)
-
-            import matplotlib.pyplot as plt
-
             plt.style.use("seaborn-v0_8-whitegrid")
             fig, ax = plt.subplots(figsize=(8, 3))
             fig.patch.set_facecolor("white")
             ax.set_facecolor("white")
-
             ticker_ret = returns_df[tickers[0]]
             positive = ticker_ret.copy()
             negative = ticker_ret.copy()
             positive[positive < 0] = 0
             negative[negative > 0] = 0
-
             ax.bar(ticker_ret.index, positive, color="#0F6E56", alpha=0.8, width=1)
             ax.bar(ticker_ret.index, negative, color="#DC2626", alpha=0.8, width=1)
             ax.axhline(0, color="#555555", linewidth=0.8)
-
             ax.spines["top"].set_visible(False)
             ax.spines["right"].set_visible(False)
             ax.spines["left"].set_color("#CCCCCC")
@@ -116,15 +106,13 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
         if "trade_error" not in st.session_state:
             st.session_state.trade_error = None
 
-        tc_col1, tc_col2, tc_col3 = st.columns([1, 1, 2])
-
+        tc_col1, tc_col2 = st.columns(2)
         with tc_col1:
             prop_ticker = st.text_input("Ticker", value="HSBA.L", key="tab2_ticker")
         with tc_col2:
-            prop_shares = st.number_input("Number of shares", min_value=0, value=100, step=10, key="tab2_shares")
-        with tc_col3:
-            st.markdown("<br>", unsafe_allow_html=True)
-            check_button = st.button("Check Trade", type="primary")
+            prop_shares = st.number_input("Shares", min_value=0, value=100, step=10, key="tab2_shares")
+
+        check_button = st.button("Check Trade", type="primary", use_container_width=True)
 
         if check_button and prop_ticker and prop_shares > 0:
             st.session_state.trade_result = None
@@ -148,7 +136,7 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
                     "var_limit": var_limit,
                 }
             except Exception as e:
-                st.session_state.trade_error = str(e) or f"Could not fetch data for {prop_ticker}. Please check the ticker symbol."
+                st.session_state.trade_error = str(e) or f"Could not fetch data for {prop_ticker}."
 
         if st.session_state.trade_result:
             r = st.session_state.trade_result
@@ -157,7 +145,7 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
                 result_bg = "#F0FDF4"
                 result_border = "#86EFAC"
                 result_title = "Trade approved"
-                result_body = f"Adding {r['prop_shares']:,} shares of {r['prop_ticker']} at £{r['prop_price']:,.2f} each (total £{r['prop_value']:,.0f}) keeps your VaR within the £{r['var_limit']:,.0f} limit."
+                result_body = f"Adding {r['prop_shares']:,} shares of {r['prop_ticker']} at £{r['prop_price']:,.2f} (total £{r['prop_value']:,.0f}) keeps VaR within the £{r['var_limit']:,.0f} limit."
             else:
                 result_color = "#DC2626"
                 result_bg = "#FEF2F2"
@@ -178,8 +166,8 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
                 <div style="font-size:12px; color:#64748B; margin-bottom:4px;">{result_body}</div>
                 <div style="font-size:12px; color:#64748B; margin-top:8px;">
                     Trade VaR: <b style="color:#1C2B4A;">£{r['prop_var_gbp']:,.0f}</b> &nbsp;|&nbsp;
-                    Share price: <b style="color:#1C2B4A;">£{r['prop_price']:,.2f}</b> &nbsp;|&nbsp;
-                    Max safe shares: <b style="color:#1C2B4A;">{r['max_shares']:,}</b>
+                    Price: <b style="color:#1C2B4A;">£{r['prop_price']:,.2f}</b> &nbsp;|&nbsp;
+                    Max shares: <b style="color:#1C2B4A;">{r['max_shares']:,}</b>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -233,7 +221,6 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
                 ticker_var = t_var(ticker_returns, confidence)
                 max_position = var_limit / abs(ticker_var)
                 max_shares = int(max_position / current_price)
-
                 st.markdown(f"""
                 <div style="
                     background: #FFFFFF;
@@ -250,4 +237,3 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
                 """, unsafe_allow_html=True)
             except Exception:
                 continue
-
