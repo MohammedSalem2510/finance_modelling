@@ -1,3 +1,8 @@
+import streamlit as st
+import numpy as np
+from risk_engine import monte_carlo_drawdown
+from charts import plot_pnl_drawdown, plot_monte_carlo
+
 def render(portfolio_ret, portfolio_value, drawdown, cumulative,
            max_dd, confidence):
 
