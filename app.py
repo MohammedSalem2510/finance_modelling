@@ -379,7 +379,7 @@ with st.spinner("Running analysis..."):
 
 st.sidebar.success(f"✅ Loaded {len(portfolio_ret)} trading days")
 
-from tabs import tab1_risk, tab2_positions, tab3_drawdown
+from tabs import tab1_risk, tab2_positions, tab3_drawdown, tab4_backtest, tab5_hedge
 
 with tab1:
     tab1_risk.render(
@@ -400,3 +400,9 @@ with tab3:
         portfolio_ret, portfolio_value, drawdown, cumulative,
         max_dd, confidence
     )
+
+with tab4:
+    tab4_backtest.render(portfolio_ret, portfolio_value, confidence)
+
+with tab5:
+    tab5_hedge.render(portfolio_ret, portfolio_value, confidence)
