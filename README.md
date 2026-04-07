@@ -2,7 +2,7 @@
 
 > An interactive, multi-tab financial risk modelling web application built with Python and Streamlit. Pulls live market data via Yahoo Finance and applies industry-standard risk methodologies including Value at Risk (VaR), drawdown analysis, VaR backtesting, and hedge effectiveness analysis.
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](YOUR_STREAMLIT_URL)
+[![Streamlit App](https://mohammedsalem2510-finance-modelling-app-elaki5.streamlit.app/)](YOUR_STREAMLIT_URL)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
