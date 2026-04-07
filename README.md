@@ -149,7 +149,7 @@ streamlit run app.py
 
 **Mohammed Salem**  
 MEng Electronic & Electrical Engineering, University of Manchester  
-[GitHub](https://github.com/MohammedSalem2510) · [LinkedIn](https://www.linkedin.com/in/mohammed-salem-profile)
+[GitHub](https://github.com/MohammedSalem2510) · [LinkedIn](https://www.linkedin.com/in/mohammed-a-m-salem/)
 
 ---
 
