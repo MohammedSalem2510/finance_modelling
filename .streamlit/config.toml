@@ -1,6 +1,53 @@
 [theme]
-primaryColor = "#0F6E56"
-backgroundColor = "#EEF2F7"
-secondaryBackgroundColor = "#FFFFFF"
-textColor = "#1C2B4A"
-font = "sans serif"
+base = "dark"
+
+# Surfaces
+backgroundColor = "#121212"
+secondaryBackgroundColor = "#1A1A1A"
+borderColor = "#2A2A2A"
+dataframeBorderColor = "#2A2A2A"
+dataframeHeaderBackgroundColor = "#1E1E1E"
+
+# Text
+textColor = "#F3F4F6"
+linkColor = "#3B82F6"
+linkUnderline = false
+
+# Brand and semantic accents
+primaryColor = "#3B82F6"
+greenColor = "#10B981"
+greenTextColor = "#10B981"
+greenBackgroundColor = "#13251F"
+redColor = "#EF4444"
+redTextColor = "#EF4444"
+redBackgroundColor = "#2E1B1B"
+blueColor = "#3B82F6"
+blueTextColor = "#3B82F6"
+blueBackgroundColor = "#1B2A45"
+orangeColor = "#F59E0B"
+orangeTextColor = "#F59E0B"
+orangeBackgroundColor = "#2C2417"
+yellowColor = "#F59E0B"
+yellowTextColor = "#F59E0B"
+yellowBackgroundColor = "#2C2417"
+grayColor = "#9CA3AF"
+grayTextColor = "#9CA3AF"
+grayBackgroundColor = "#1E1E1E"
+
+# Typography: dense sans-serif, small base size
+font = "Inter, Roboto, system-ui, sans-serif"
+headingFont = "Inter, Roboto, system-ui, sans-serif"
+codeFont = "'SF Mono', 'Cascadia Mono', Consolas, monospace"
+baseFontSize = 13
+baseFontWeight = 400
+metricValueFontSize = "22px"
+metricValueFontWeight = 600
+
+# Geometry: hard corners, visible hairline borders
+baseRadius = "4px"
+buttonRadius = "4px"
+showWidgetBorder = true
+showSidebarBorder = true
+
+# Flat, on-palette series colours for any native Streamlit chart
+chartCategoricalColors = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#9CA3AF"]

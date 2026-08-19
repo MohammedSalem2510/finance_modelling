@@ -194,11 +194,11 @@ def kupiec_test(n, violations, confidence):
 
 def basel_zone(violations):
     if violations <= 4:
-        return "🟢 Green"
+        return "Green"
     elif violations <= 9:
-        return "🟡 Yellow"
+        return "Yellow"
     else:
-        return "🔴 Red"
+        return "Red"
 
 def stress_test(returns, portfolio_value=10000):
     scenarios = {

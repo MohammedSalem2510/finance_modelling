@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from scipy.stats import t as t_dist
+
+import theme
 from charts import plot_return_distribution, plot_marginal_var
 from risk_engine import historical_var, t_var
 
@@ -15,24 +17,22 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
         st.metric("Portfolio Value", f"£{portfolio_value:,.0f}")
     with col2:
         st.metric("Historical VaR 99%", f"£{abs(h_var) * portfolio_value:,.0f}",
-                 delta=f"{h_var:.2%}", delta_color="inverse")
+                  delta=f"{h_var:.2%}", delta_color="inverse")
     with col3:
         st.metric("T-dist VaR 99%", f"£{abs(t_v) * portfolio_value:,.0f}",
-                 delta=f"{t_v:.2%}", delta_color="inverse")
+                  delta=f"{t_v:.2%}", delta_color="inverse")
     with col4:
         st.metric("Max Drawdown", f"{max_dd:.2%}",
-                 delta=f"{max_dd:.2%}", delta_color="inverse")
+                  delta=f"{max_dd:.2%}", delta_color="inverse")
     with col5:
         st.metric("Sharpe Ratio", f"{sharpe:.2f}",
-                 delta="Good" if sharpe > 1 else "Weak",
-                 delta_color="normal" if sharpe > 1 else "inverse")
-
-    st.divider()
+                  delta="Good" if sharpe > 1 else "Weak",
+                  delta_color="normal" if sharpe > 1 else "inverse")
 
     col1, col2 = st.columns([1, 1.6])
 
     with col1:
-        st.markdown('<div class="card-title">VaR Comparison</div>', unsafe_allow_html=True)
+        theme.panel_title("VaR Comparison")
 
         worst_var = min(h_var, p_var, t_v)
         best_var = max(h_var, p_var, t_v)
@@ -53,9 +53,7 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
         })
         st.dataframe(var_df, hide_index=True, use_container_width=True)
 
-        st.divider()
-
-        st.markdown('<div class="card-title">Portfolio Statistics</div>', unsafe_allow_html=True)
+        theme.panel_title("Portfolio Statistics")
 
         nu, mu, sigma = t_dist.fit(portfolio_ret)
 
@@ -80,8 +78,7 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
         st.dataframe(stats_df, hide_index=True, use_container_width=True)
 
         if len(tickers) > 1:
-            st.divider()
-            st.markdown('<div class="card-title">Portfolio Weights</div>', unsafe_allow_html=True)
+            theme.panel_title("Portfolio Weights")
             weights_data = pd.DataFrame({
                 "Ticker": list(weights.keys()),
                 "Weight": [f"{w:.1%}" for w in weights.values()],
@@ -89,59 +86,54 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
             })
             st.dataframe(weights_data, hide_index=True, use_container_width=True)
 
-            st.divider()
-            st.markdown('<div class="card-title">Marginal VaR by Asset</div>', unsafe_allow_html=True)
+            theme.panel_title("Marginal VaR by Asset")
             st.pyplot(plot_marginal_var(m_vars, portfolio_value))
 
     with col2:
-        st.markdown('<div class="card-title">Return Distribution</div>', unsafe_allow_html=True)
+        theme.panel_title("Return Distribution vs Fitted Models")
         st.pyplot(plot_return_distribution(portfolio_ret, h_var, p_var, t_v))
 
-        st.divider()
-
-        st.markdown('<div class="card-title">Key Insights</div>', unsafe_allow_html=True)
+        theme.panel_title("Key Insights")
 
         fat_tail = nu < 5
         var_gap = abs(h_var - p_var) / abs(p_var) * 100
         sharpe_comment = "strong" if sharpe > 1 else "weak" if sharpe < 0.5 else "moderate"
+        ann_return = float(portfolio_ret.mean()) * 252
+        ann_vol = float(portfolio_ret.std()) * np.sqrt(252)
 
-        insights = [
-            {
-                "color": "#DC2626" if fat_tail else "#0F6E56",
-                "bg": "#FEF2F2" if fat_tail else "#F0FDF4",
-                "border": "#FCA5A5" if fat_tail else "#86EFAC",
-                "title": f"Fat tails {'detected' if fat_tail else 'not detected'}",
-                "body": f"T-distribution degrees of freedom: {nu:.2f}. {'Extreme moves occur more frequently than the normal distribution predicts.' if fat_tail else 'Return distribution is close to normal.'}"
-            },
-            {
-                "color": "#92400E",
-                "bg": "#FFFBEB",
-                "border": "#FCD34D",
-                "title": f"Normal model underestimates risk by {var_gap:.1f}%",
-                "body": f"Parametric VaR is £{abs(abs(h_var) - abs(p_var)) * portfolio_value:,.0f} lower than historical VaR. Use t-distribution VaR for more reliable estimates."
-            },
-            {
-                "color": "#0F6E56" if sharpe > 1 else "#DC2626" if sharpe < 0 else "#92400E",
-                "bg": "#F0FDF4" if sharpe > 1 else "#FEF2F2" if sharpe < 0 else "#FFFBEB",
-                "border": "#86EFAC" if sharpe > 1 else "#FCA5A5" if sharpe < 0 else "#FCD34D",
-                "title": f"Sharpe ratio: {sharpe:.2f} — {sharpe_comment} risk-adjusted returns",
-                "body": f"Annualised return of {float(portfolio_ret.mean()) * 252:.2%} against volatility of {float(portfolio_ret.std()) * np.sqrt(252):.2%} at a {risk_free_rate:.1%} risk-free rate."
-            }
-        ]
+        theme.callout(
+            f"Fat tails {'detected' if fat_tail else 'not detected'}",
+            body=(
+                "Extreme moves occur more frequently than the normal "
+                "distribution predicts."
+                if fat_tail else
+                "Return distribution is close to normal."
+            ),
+            rows=[("T-dist degrees of freedom", f"{nu:.2f}")],
+            tone="negative" if fat_tail else "positive",
+        )
 
-        for insight in insights:
-            st.markdown(f"""
-            <div style="
-                background: {insight['bg']};
-                border: 1px solid {insight['border']};
-                border-left: 4px solid {insight['color']};
-                border-radius: 8px;
-                padding: 14px 16px;
-                margin-bottom: 10px;
-            ">
-                <div style="margin-bottom:4px;">
-                    <span style="font-size:13px; font-weight:600; color:{insight['color']};">{insight['title']}</span>
-                </div>
-                <p style="font-size:12px; color:#64748B; margin:0; line-height:1.5;">{insight['body']}</p>
-            </div>
-            """, unsafe_allow_html=True)
+        theme.callout(
+            f"Normal model underestimates risk by {var_gap:.1f}%",
+            body=(
+                "Parametric VaR sits below historical VaR. Use t-distribution "
+                "VaR for more reliable tail estimates."
+            ),
+            rows=[
+                ("Understatement",
+                 f"£{abs(abs(h_var) - abs(p_var)) * portfolio_value:,.0f}"),
+                ("Historical VaR", f"{h_var:.3%}"),
+                ("Parametric VaR", f"{p_var:.3%}"),
+            ],
+            tone="warning",
+        )
+
+        theme.callout(
+            f"Sharpe ratio {sharpe:.2f} — {sharpe_comment} risk-adjusted returns",
+            rows=[
+                ("Annualised return", f"{ann_return:.2%}"),
+                ("Annualised volatility", f"{ann_vol:.2%}"),
+                ("Risk-free rate", f"{risk_free_rate:.2%}"),
+            ],
+            tone="positive" if sharpe > 1 else "negative" if sharpe < 0 else "warning",
+        )

@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
-import matplotlib.pyplot as plt
-import numpy as np
+
+import theme
+from charts import plot_correlation_matrix, plot_daily_returns
 from risk_engine import historical_var, t_var
 
 
@@ -10,11 +11,11 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
            tickers, t_v, price_data, returns_df,
            var_limit, confidence, start_date, end_date):
 
-    st.markdown('<div class="card-title">Current Portfolio Positions</div>', unsafe_allow_html=True)
-
     col1, col2 = st.columns([1.5, 1])
 
     with col1:
+        theme.panel_title("Current Portfolio Positions")
+
         position_rows = []
         for ticker in tickers:
             try:
@@ -39,67 +40,15 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
         positions_df = pd.DataFrame(position_rows)
         st.dataframe(positions_df, hide_index=True, use_container_width=True)
 
-        st.divider()
-
         if len(tickers) > 1:
-            st.markdown('<div class="card-title">Asset Correlation</div>', unsafe_allow_html=True)
-            corr_matrix = returns_df.corr()
-            plt.style.use("seaborn-v0_8-whitegrid")
-            fig, ax = plt.subplots(figsize=(6, 4))
-            fig.patch.set_facecolor("white")
-            ax.set_facecolor("white")
-            instruments = list(corr_matrix.columns)
-            im = ax.imshow(corr_matrix, cmap="RdYlGn", vmin=-1, vmax=1)
-            plt.colorbar(im, ax=ax)
-            ax.set_xticks(range(len(instruments)))
-            ax.set_yticks(range(len(instruments)))
-            ax.set_xticklabels(instruments, fontsize=9, color="#555555")
-            ax.set_yticklabels(instruments, fontsize=9, color="#555555")
-            for i in range(len(instruments)):
-                for j in range(len(instruments)):
-                    ax.text(j, i, f"{corr_matrix.iloc[i,j]:.2f}",
-                           ha="center", va="center",
-                           fontsize=9, fontweight="bold", color="#1A1A1A")
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
-            ax.set_title("Asset Correlation Matrix",
-                        fontsize=11, fontweight="bold", loc="left")
-            ax.tick_params(colors="#555555", labelsize=8)
-            plt.tight_layout()
-            st.pyplot(fig)
-
+            theme.panel_title("Asset Correlation Matrix")
+            st.pyplot(plot_correlation_matrix(returns_df.corr()))
         else:
-            st.markdown('<div class="card-title">Daily Returns</div>', unsafe_allow_html=True)
-            plt.style.use("seaborn-v0_8-whitegrid")
-            fig, ax = plt.subplots(figsize=(8, 3))
-            fig.patch.set_facecolor("white")
-            ax.set_facecolor("white")
-            ticker_ret = returns_df[tickers[0]]
-            positive = ticker_ret.copy()
-            negative = ticker_ret.copy()
-            positive[positive < 0] = 0
-            negative[negative > 0] = 0
-            ax.bar(ticker_ret.index, positive, color="#0F6E56", alpha=0.8, width=1)
-            ax.bar(ticker_ret.index, negative, color="#DC2626", alpha=0.8, width=1)
-            ax.axhline(0, color="#555555", linewidth=0.8)
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
-            ax.spines["left"].set_color("#CCCCCC")
-            ax.spines["bottom"].set_color("#CCCCCC")
-            ax.yaxis.grid(True, color="#EEEEEE", linewidth=0.8, zorder=0)
-            ax.xaxis.grid(False)
-            ax.set_title(f"{tickers[0]} Daily Returns",
-                        fontsize=11, fontweight="bold", loc="left")
-            ax.set_ylabel("Daily Return", fontsize=9, color="#555555")
-            ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f"{y:.1%}"))
-            ax.xaxis.set_major_locator(plt.MaxNLocator(6))
-            ax.tick_params(colors="#555555", labelsize=8)
-            ax.tick_params(axis="x", rotation=30)
-            plt.tight_layout()
-            st.pyplot(fig)
+            theme.panel_title(f"{tickers[0]} Daily Returns")
+            st.pyplot(plot_daily_returns(returns_df[tickers[0]], tickers[0]))
 
     with col2:
-        st.markdown('<div class="card-title">Proposed Trade Checker</div>', unsafe_allow_html=True)
+        theme.panel_title("Proposed Trade Checker")
 
         if "trade_result" not in st.session_state:
             st.session_state.trade_result = None
@@ -140,79 +89,60 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
 
         if st.session_state.trade_result:
             r = st.session_state.trade_result
-            if r["prop_var_gbp"] <= r["var_limit"]:
-                result_color = "#0F6E56"
-                result_bg = "#F0FDF4"
-                result_border = "#86EFAC"
-                result_title = "Trade approved"
-                result_body = f"Adding {r['prop_shares']:,} shares of {r['prop_ticker']} at £{r['prop_price']:,.2f} (total £{r['prop_value']:,.0f}) keeps VaR within the £{r['var_limit']:,.0f} limit."
+            within_limit = r["prop_var_gbp"] <= r["var_limit"]
+            if within_limit:
+                title = "Trade approved"
+                body = (
+                    f"Adding {r['prop_shares']:,} shares of {r['prop_ticker']} "
+                    f"keeps portfolio VaR within the "
+                    f"£{r['var_limit']:,.0f} limit."
+                )
             else:
-                result_color = "#DC2626"
-                result_bg = "#FEF2F2"
-                result_border = "#FCA5A5"
-                result_title = "Trade exceeds VaR limit"
-                result_body = f"This trade generates £{r['prop_var_gbp']:,.0f} of VaR against your £{r['var_limit']:,.0f} limit. Reduce to {r['max_shares']:,} shares or less."
+                title = "Trade exceeds VaR limit"
+                body = (
+                    f"This trade generates £{r['prop_var_gbp']:,.0f} of VaR "
+                    f"against a £{r['var_limit']:,.0f} limit. Reduce to "
+                    f"{r['max_shares']:,} shares or fewer."
+                )
 
-            st.markdown(f"""
-            <div style="
-                background: {result_bg};
-                border: 1px solid {result_border};
-                border-left: 4px solid {result_color};
-                border-radius: 8px;
-                padding: 16px;
-                margin-top: 12px;
-            ">
-                <div style="font-size:13px; font-weight:600; color:{result_color}; margin-bottom:8px;">{result_title}</div>
-                <div style="font-size:12px; color:#64748B; margin-bottom:4px;">{result_body}</div>
-                <div style="font-size:12px; color:#64748B; margin-top:8px;">
-                    Trade VaR: <b style="color:#1C2B4A;">£{r['prop_var_gbp']:,.0f}</b> &nbsp;|&nbsp;
-                    Price: <b style="color:#1C2B4A;">£{r['prop_price']:,.2f}</b> &nbsp;|&nbsp;
-                    Max shares: <b style="color:#1C2B4A;">{r['max_shares']:,}</b>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            theme.callout(
+                title,
+                body=body,
+                rows=[
+                    ("Trade VaR", f"£{r['prop_var_gbp']:,.0f}"),
+                    ("Notional", f"£{r['prop_value']:,.0f}"),
+                    ("Price", f"£{r['prop_price']:,.2f}"),
+                    ("Max shares", f"{r['max_shares']:,}"),
+                ],
+                tone="positive" if within_limit else "negative",
+            )
 
         elif st.session_state.trade_error:
             st.error(st.session_state.trade_error)
 
-        st.divider()
-
-        st.markdown('<div class="card-title">VaR Limit Status</div>', unsafe_allow_html=True)
+        theme.panel_title("VaR Limit Status")
 
         current_var_gbp = abs(t_v) * portfolio_value
         var_utilisation = current_var_gbp / var_limit * 100
 
         if var_utilisation <= 80:
-            status_color = "#0F6E56"
-            status_bg = "#F0FDF4"
-            status_border = "#86EFAC"
-            status_text = "Within limit"
+            tone, status_text = "positive", "Within limit"
         elif var_utilisation <= 100:
-            status_color = "#92400E"
-            status_bg = "#FFFBEB"
-            status_border = "#FCD34D"
-            status_text = "Approaching limit"
+            tone, status_text = "warning", "Approaching limit"
         else:
-            status_color = "#DC2626"
-            status_bg = "#FEF2F2"
-            status_border = "#FCA5A5"
-            status_text = "Limit exceeded"
+            tone, status_text = "negative", "Limit exceeded"
 
-        st.markdown(f"""
-        <div style="
-            background: {status_bg};
-            border: 1px solid {status_border};
-            border-left: 4px solid {status_color};
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 12px;
-        ">
-            <div style="font-size:13px; font-weight:600; color:{status_color}; margin-bottom:8px;">{status_text}</div>
-            <div style="font-size:12px; color:#64748B; margin-bottom:4px;">Current T-dist VaR: <b style="color:#1C2B4A;">£{current_var_gbp:,.0f}</b></div>
-            <div style="font-size:12px; color:#64748B; margin-bottom:4px;">VaR limit: <b style="color:#1C2B4A;">£{var_limit:,.0f}</b></div>
-            <div style="font-size:12px; color:#64748B;">Utilisation: <b style="color:{status_color};">{var_utilisation:.1f}%</b></div>
-        </div>
-        """, unsafe_allow_html=True)
+        theme.callout(
+            status_text,
+            rows=[
+                ("Current T-dist VaR", f"£{current_var_gbp:,.0f}"),
+                ("VaR limit", f"£{var_limit:,.0f}"),
+                ("Utilisation", f"{var_utilisation:.1f}%"),
+            ],
+            tone=tone,
+        )
+
+        theme.panel_title(f"Max Position at £{var_limit:,.0f} VaR Limit")
 
         for ticker in tickers:
             try:
@@ -221,19 +151,15 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
                 ticker_var = t_var(ticker_returns, confidence)
                 max_position = var_limit / abs(ticker_var)
                 max_shares = int(max_position / current_price)
-                st.markdown(f"""
-                <div style="
-                    background: #FFFFFF;
-                    border: 1px solid #E2E8F0;
-                    border-radius: 8px;
-                    padding: 14px 16px;
-                    margin-bottom: 8px;
-                ">
-                    <div style="font-size:12px; font-weight:600; color:#1C2B4A; margin-bottom:6px;">{ticker} — Max position at £{var_limit:,.0f} VaR limit</div>
-                    <div style="font-size:12px; color:#64748B;">Max position: <b style="color:#1C2B4A;">£{max_position:,.0f}</b></div>
-                    <div style="font-size:12px; color:#64748B;">Max shares: <b style="color:#1C2B4A;">{max_shares:,}</b></div>
-                    <div style="font-size:12px; color:#64748B;">Current price: <b style="color:#1C2B4A;">£{current_price:,.2f}</b></div>
-                </div>
-                """, unsafe_allow_html=True)
+                theme.callout(
+                    ticker,
+                    rows=[
+                        ("Max position", f"£{max_position:,.0f}"),
+                        ("Max shares", f"{max_shares:,}"),
+                        ("Current price", f"£{current_price:,.2f}"),
+                        ("Asset T-dist VaR", f"{ticker_var:.2%}"),
+                    ],
+                    tone="muted",
+                )
             except Exception:
                 continue
