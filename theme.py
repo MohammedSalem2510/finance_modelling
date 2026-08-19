@@ -104,11 +104,13 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"
 }
 
 .stApp, [data-testid="stAppViewContainer"] { background-color: var(--bg); }
-[data-testid="stHeader"] { background-color: var(--bg); border-bottom: 1px solid var(--border); }
+[data-testid="stHeader"] { background-color: var(--bg); }
 [data-testid="stToolbar"] { background-color: var(--bg); }
 
 .block-container {
-    padding-top: 1.5rem;
+    /* Streamlit's toolbar is position:absolute and 3.75rem tall, so reserve
+       room for it or the app header renders underneath the Stop/Fork buttons. */
+    padding-top: calc(3.75rem + 12px);
     padding-bottom: 2.5rem;
     max-width: 1600px;
 }

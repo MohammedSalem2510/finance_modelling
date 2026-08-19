@@ -73,20 +73,15 @@ if not st.session_state.get("analysis_run", False):
     st.info("Configure the portfolio in the sidebar, then run the analysis.")
     st.stop()
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "Risk Overview",
-    "Position Management",
-    "Drawdown & Monte Carlo",
-    "Backtest & Stress Test",
-    "Hedge Analysis"
-])
-
-
 with st.spinner("Downloading price data..."):
     price_data = fetch_data(tickers, start_date, end_date)
 
 if price_data.empty:
-    st.error("No data found. Please check your ticker symbols.")
+    st.error(
+        f"No price data returned for {', '.join(dict.fromkeys(tickers))}. "
+        "Check the ticker symbols, or retry shortly — the data provider "
+        "throttles frequent requests."
+    )
     st.stop()
 
 missing = [t for t in dict.fromkeys(tickers) if t not in price_data.columns]
@@ -100,7 +95,10 @@ tickers = [t for t in dict.fromkeys(tickers) if t in price_data.columns]
 amounts = {t: amounts[t] for t in tickers}
 
 if not tickers:
-    st.error("No data found. Please check your ticker symbols.")
+    st.error(
+        "None of the requested tickers returned usable price data. "
+        "Check the symbols and the selected date range."
+    )
     st.stop()
 
 returns_df = compute_returns(price_data[tickers])
@@ -133,6 +131,14 @@ with st.sidebar:
     theme.status_line("Trading days loaded", f"{len(portfolio_ret):,}")
 
 from tabs import tab1_risk, tab2_positions, tab3_drawdown, tab4_backtest, tab5_hedge
+
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "Risk Overview",
+    "Position Management",
+    "Drawdown & Monte Carlo",
+    "Backtest & Stress Test",
+    "Hedge Analysis"
+])
 
 with tab1:
     tab1_risk.render(

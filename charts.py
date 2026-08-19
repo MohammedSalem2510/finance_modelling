@@ -148,6 +148,47 @@ def plot_backtest(returns, h_var_series, t_var_series,
     return fig
 
 
+def _draw_heatmap(fig, ax, corr_matrix, title=None):
+    """Correlation heatmap: bounded grid, hairline cell separators, snug colourbar.
+
+    The separators matter because near-zero correlations sit at the middle of
+    the diverging ramp, which is the card surface colour - without them those
+    cells read as holes in the matrix rather than as data.
+    """
+    instruments = list(corr_matrix.columns)
+    n = len(instruments)
+
+    im = ax.imshow(corr_matrix, cmap=theme.correlation_cmap(),
+                   vmin=-1, vmax=1, aspect="auto")
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03)
+    cbar.outline.set_edgecolor(theme.BORDER)
+    cbar.ax.tick_params(colors=theme.TEXT_DIM, labelsize=7, length=2)
+
+    ax.set_xticks(range(n))
+    ax.set_yticks(range(n))
+    ax.set_xticklabels(instruments, fontsize=8, color=theme.TEXT_MUTED)
+    ax.set_yticklabels(instruments, fontsize=8, color=theme.TEXT_MUTED)
+    for i in range(n):
+        for j in range(n):
+            ax.text(j, i, f"{corr_matrix.iloc[i, j]:.2f}",
+                    ha="center", va="center", fontsize=8,
+                    fontweight="600", color=theme.TEXT)
+
+    # Bounded table with hairline separators between cells.
+    ax.set_xticks(np.arange(-0.5, n, 1), minor=True)
+    ax.set_yticks(np.arange(-0.5, n, 1), minor=True)
+    ax.grid(which="minor", color=theme.BORDER, linewidth=0.8)
+    ax.tick_params(which="minor", length=0)
+    ax.tick_params(which="major", length=0)
+    for side in ax.spines.values():
+        side.set_visible(True)
+        side.set_color(theme.BORDER)
+        side.set_linewidth(0.8)
+    if title:
+        ax.set_title(title, fontsize=10, loc="left")
+    return im
+
+
 def plot_stress_test(returns, portfolio_value=10000):
     from risk_engine import stress_test
     results = stress_test(returns, portfolio_value)
@@ -191,27 +232,7 @@ def plot_hedge_analysis(portfolio_returns, hedge_results, all_returns,
     axes = axes.flatten()
 
     # --- correlation matrix -------------------------------------------------
-    ax1 = axes[0]
-    corr_matrix = all_returns.corr()
-    instruments = list(corr_matrix.columns)
-    im = ax1.imshow(corr_matrix, cmap=theme.correlation_cmap(),
-                    vmin=-1, vmax=1)
-    cbar = fig.colorbar(im, ax=ax1, fraction=0.046, pad=0.03)
-    cbar.outline.set_edgecolor(theme.BORDER)
-    cbar.ax.tick_params(colors=theme.TEXT_DIM, labelsize=7, length=2)
-    ax1.set_xticks(range(len(instruments)))
-    ax1.set_yticks(range(len(instruments)))
-    ax1.set_xticklabels(instruments, fontsize=8, color=theme.TEXT_MUTED)
-    ax1.set_yticklabels(instruments, fontsize=8, color=theme.TEXT_MUTED)
-    for i in range(len(instruments)):
-        for j in range(len(instruments)):
-            ax1.text(j, i, f"{corr_matrix.iloc[i, j]:.2f}",
-                     ha="center", va="center", fontsize=8,
-                     fontweight="600", color=theme.TEXT)
-    ax1.set_title("Correlation matrix", fontsize=10, loc="left")
-    for side in ax1.spines.values():
-        side.set_visible(False)
-    ax1.tick_params(length=0)
+    _draw_heatmap(fig, axes[0], all_returns.corr(), title="Correlation matrix")
 
     # --- VaR: hedged vs unhedged ------------------------------------------
     ax2 = axes[1]
@@ -234,7 +255,8 @@ def plot_hedge_analysis(portfolio_returns, hedge_results, all_returns,
     theme.currency_axis(ax2)
     ax2.set_title("VaR - hedged vs unhedged", fontsize=10, loc="left")
     theme.style_axes(ax2, grid="y")
-    theme.legend_above(ax2, ncol=2, loc="lower right", bbox_to_anchor=(1.0, 1.0))
+    ax2.set_ylim(0, (max(h_vars + t_vars) or 1) * 1.34)
+    theme.legend(ax2, loc="upper center", ncol=2)
 
     # --- per-instrument equity curves -------------------------------------
     for ax_idx, (hedge_name, result) in enumerate(hedge_results.items()):
@@ -306,24 +328,6 @@ def plot_daily_returns(ticker_returns, ticker):
 def plot_correlation_matrix(corr_matrix, figsize=(6, 4)):
     """Standalone correlation heatmap on the palette's diverging ramp."""
     fig, ax = theme.figure(figsize)
-    instruments = list(corr_matrix.columns)
-
-    im = ax.imshow(corr_matrix, cmap=theme.correlation_cmap(), vmin=-1, vmax=1)
-    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.03)
-    cbar.outline.set_edgecolor(theme.BORDER)
-    cbar.ax.tick_params(colors=theme.TEXT_DIM, labelsize=7, length=2)
-
-    ax.set_xticks(range(len(instruments)))
-    ax.set_yticks(range(len(instruments)))
-    ax.set_xticklabels(instruments, fontsize=8, color=theme.TEXT_MUTED)
-    ax.set_yticklabels(instruments, fontsize=8, color=theme.TEXT_MUTED)
-    for i in range(len(instruments)):
-        for j in range(len(instruments)):
-            ax.text(j, i, f"{corr_matrix.iloc[i, j]:.2f}",
-                    ha="center", va="center", fontsize=8,
-                    fontweight="600", color=theme.TEXT)
-    for side in ax.spines.values():
-        side.set_visible(False)
-    ax.tick_params(length=0)
+    _draw_heatmap(fig, ax, corr_matrix)
     plt.tight_layout(pad=0.8)
     return fig
