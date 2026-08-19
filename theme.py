@@ -108,9 +108,13 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"
 [data-testid="stToolbar"] { background-color: var(--bg); }
 
 .block-container {
-    /* Streamlit's toolbar is position:absolute and 3.75rem tall, so reserve
-       room for it or the app header renders underneath the Stop/Fork buttons. */
-    padding-top: calc(3.75rem + 12px);
+    /* Streamlit's toolbar is position:absolute and overlays the page, so this
+       must reserve enough room to clear it or the app header renders
+       underneath it. Fixed px on purpose: toolbar height varies by Streamlit
+       version and host (Community Cloud adds Fork/GitHub/Stop controls to the
+       same bar), so this can't be derived from our own theme's rem/font-size
+       without risking exactly that mismatch. */
+    padding-top: 96px;
     padding-bottom: 2.5rem;
     max-width: 1600px;
 }
@@ -151,16 +155,6 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"
     letter-spacing: 0.04em;
     border-left: 1px solid var(--border);
     padding-left: 12px;
-}
-.app-status {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--green);
-    letter-spacing: 0.10em;
-    text-transform: uppercase;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 3px 8px;
 }
 
 /* ---------------- panels ---------------- */
@@ -420,7 +414,7 @@ def inject_css():
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
 
 
-def header(title, subtitle, status="Live"):
+def header(title, subtitle):
     """Render the application header bar."""
     st.markdown(
         f"""
@@ -429,7 +423,6 @@ def header(title, subtitle, status="Live"):
                 <div class="app-title">{title}</div>
                 <div class="app-subtitle">{subtitle}</div>
             </div>
-            <div class="app-status">{status}</div>
         </div>
         """,
         unsafe_allow_html=True,

@@ -24,7 +24,6 @@ theme.apply_chart_theme()
 theme.header(
     "Portfolio Risk Analyser",
     "Value at Risk / Drawdown / Stress / Hedge",
-    status="Live",
 )
 
 with st.sidebar:
