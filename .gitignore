@@ -62,3 +62,6 @@ Thumbs.db
 .env.*
 secrets.json
 config.local.*
+
+# Claude Code local settings
+.claude/

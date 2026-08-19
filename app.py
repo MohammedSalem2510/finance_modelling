@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from risk_engine import (
+    InsufficientDataError,
     fetch_data, compute_returns, compute_portfolio_returns,
     historical_var, parametric_var, t_var, sharpe_ratio,
     marginal_var, diversification_benefit, drawdown_analysis,
@@ -363,19 +364,45 @@ if price_data.empty:
     st.error("No data found. Please check your ticker symbols.")
     st.stop()
 
-with st.spinner("Running analysis..."):
-    returns_df = compute_returns(price_data)
-    portfolio_ret, weights = compute_portfolio_returns(returns_df, amounts)
-    portfolio_value = sum(amounts.values())
+missing = [t for t in dict.fromkeys(tickers) if t not in price_data.columns]
+if missing:
+    st.warning(
+        f"No price data for {', '.join(missing)} — "
+        "these holdings were excluded and the remaining weights re-normalised."
+    )
 
-    h_var = historical_var(portfolio_ret, confidence)
-    p_var = parametric_var(portfolio_ret, confidence)
-    t_v = t_var(portfolio_ret, confidence)
-    sharpe = sharpe_ratio(portfolio_ret, risk_free_rate)
-    div_benefit = diversification_benefit(returns_df, weights, confidence)
-    m_vars = marginal_var(returns_df, weights, confidence)
-    cumulative, drawdown = drawdown_analysis(portfolio_ret, portfolio_value)
-    max_dd = float(drawdown.min())
+tickers = [t for t in dict.fromkeys(tickers) if t in price_data.columns]
+amounts = {t: amounts[t] for t in tickers}
+
+if not tickers:
+    st.error("No data found. Please check your ticker symbols.")
+    st.stop()
+
+returns_df = compute_returns(price_data[tickers])
+if len(returns_df) < 2:
+    st.error(
+        f"Only {len(returns_df)} day(s) of overlapping return data for "
+        f"{', '.join(tickers)}. Widen the date range, or drop tickers whose "
+        "trading history does not overlap."
+    )
+    st.stop()
+
+with st.spinner("Running analysis..."):
+    try:
+        portfolio_ret, weights = compute_portfolio_returns(returns_df, amounts)
+        portfolio_value = sum(amounts.values())
+
+        h_var = historical_var(portfolio_ret, confidence)
+        p_var = parametric_var(portfolio_ret, confidence)
+        t_v = t_var(portfolio_ret, confidence)
+        sharpe = sharpe_ratio(portfolio_ret, risk_free_rate)
+        div_benefit = diversification_benefit(returns_df, weights, confidence)
+        m_vars = marginal_var(returns_df, weights, confidence)
+        cumulative, drawdown = drawdown_analysis(portfolio_ret, portfolio_value)
+        max_dd = float(drawdown.min())
+    except InsufficientDataError as exc:
+        st.error(f"{exc} Try widening the date range or checking the tickers.")
+        st.stop()
 
 st.sidebar.success(f"✅ Loaded {len(portfolio_ret)} trading days")
 

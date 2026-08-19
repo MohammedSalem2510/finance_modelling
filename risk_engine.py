@@ -3,70 +3,101 @@ import pandas as pd
 import yfinance as yf
 from scipy.stats import norm, t as t_dist
 
+class InsufficientDataError(ValueError):
+    """Raised when a return series is too short to compute a risk metric."""
+
+
+def _clean_returns(returns, min_obs=1, name="this metric"):
+    if isinstance(returns, pd.DataFrame):
+        returns = returns.squeeze(axis=1)
+    if isinstance(returns, pd.DataFrame):
+        raise InsufficientDataError(
+            "Expected a single return series, got a table with "
+            f"{returns.shape[1]} columns."
+        )
+    if not isinstance(returns, pd.Series):
+        returns = pd.Series(returns)
+    returns = returns.dropna()
+    if len(returns) < min_obs:
+        raise InsufficientDataError(
+            f"Not enough return data to compute {name}: need at least "
+            f"{min_obs} observation(s), got {len(returns)}."
+        )
+    return returns
+
+
 def fetch_data(tickers, start, end):
     if isinstance(tickers, str):
         tickers = [tickers]
+    tickers = list(dict.fromkeys(tickers))
     data = yf.download(tickers, start=start, end=end, progress=False)
-    if len(tickers) == 1:
+    if data.empty:
+        return pd.DataFrame()
+    try:
         close = data["Close"]
+    except KeyError:
+        return pd.DataFrame()
+    if len(tickers) == 1:
         if isinstance(close, pd.DataFrame):
-            close = close.squeeze()
-        return pd.DataFrame({tickers[0]: close})
-    close = data["Close"]
-    close.columns = [col[0] if isinstance(col, tuple) else col 
-                     for col in close.columns]
-    return close
+            close = close.squeeze(axis=1)
+        close = pd.DataFrame({tickers[0]: close})
+    else:
+        close.columns = [col[0] if isinstance(col, tuple) else col 
+                         for col in close.columns]
+    # Unknown/delisted tickers come back as an all-NaN column: drop them so
+    # they cannot wipe out every row of the portfolio later on.
+    return close.dropna(axis=1, how="all")
 
 def compute_returns(price_df):
     return price_df.pct_change(fill_method=None).dropna()
 
 def compute_portfolio_returns(returns_df, amounts):
-    total = sum(amounts.values())
-    weights = {ticker: amount / total for ticker, amount in amounts.items()}
-    
     if isinstance(returns_df, pd.Series):
-        return returns_df, weights
+        total = sum(amounts.values())
+        weights = {ticker: amount / total for ticker, amount in amounts.items()}
+        return returns_df.dropna(), weights
     
     returns_df = returns_df.copy()
     returns_df.columns = [col[0] if isinstance(col, tuple) else col 
                           for col in returns_df.columns]
     
-    available = [t for t in weights.keys() if t in returns_df.columns]
+    available = [t for t in amounts.keys() if t in returns_df.columns]
+    if not available:
+        raise InsufficientDataError(
+            "None of the requested tickers returned any price data."
+        )
+    
+    # Re-normalise over the tickers we actually have, otherwise the weights
+    # would not sum to 1 whenever a ticker is missing.
+    total = sum(amounts[ticker] for ticker in available)
+    weights = {ticker: amounts[ticker] / total for ticker in available}
+    
     returns_df = returns_df[available].dropna()
     
     portfolio_ret = sum(
         returns_df[ticker] * weight 
-        for ticker, weight in weights.items() 
-        if ticker in returns_df.columns
+        for ticker, weight in weights.items()
     )
     
     return portfolio_ret, weights
 
 def historical_var(returns, confidence=0.99):
-    returns = returns.dropna()
-    if isinstance(returns, pd.DataFrame):
-        returns = returns.squeeze()
+    returns = _clean_returns(returns, min_obs=1, name="historical VaR")
     return float(np.percentile(returns, (1 - confidence) * 100))
 
 def parametric_var(returns, confidence=0.99):
-    returns = returns.dropna()
-    if isinstance(returns, pd.DataFrame):
-        returns = returns.squeeze()
+    returns = _clean_returns(returns, min_obs=2, name="parametric VaR")
     mu = float(returns.mean())
     sigma = float(returns.std())
     return float(mu + sigma * norm.ppf(1 - confidence))
 
 def t_var(returns, confidence=0.99):
-    returns = returns.dropna()
-    if isinstance(returns, pd.DataFrame):
-        returns = returns.squeeze()
+    returns = _clean_returns(returns, min_obs=3, name="Student-t VaR")
     nu, mu, sigma = t_dist.fit(returns)
     return float(t_dist.ppf(1 - confidence, nu, mu, sigma))
 
 def sharpe_ratio(returns, risk_free_rate=0.05):
-    returns = returns.dropna()
-    if isinstance(returns, pd.DataFrame):
-        returns = returns.squeeze()
+    returns = _clean_returns(returns, min_obs=2, name="the Sharpe ratio")
     annual_return = float(returns.mean()) * 252
     annual_vol = float(returns.std()) * np.sqrt(252)
     if annual_vol == 0:
@@ -78,6 +109,8 @@ def marginal_var(returns_df, weights, confidence=0.99):
     portfolio_vol = float(portfolio_ret.std())
     marginal_vars = {}
     for ticker in returns_df.columns:
+        if ticker not in weights:
+            continue
         asset_ret = returns_df[ticker]
         correlation = float(asset_ret.corr(portfolio_ret))
         asset_vol = float(asset_ret.std())
@@ -96,7 +129,7 @@ def diversification_benefit(returns_df, weights, confidence=0.99):
     return sum_individual - portfolio_var
 
 def drawdown_analysis(returns, portfolio_value=10000):
-    returns = returns.dropna()
+    returns = _clean_returns(returns, min_obs=1, name="drawdowns")
     cumulative = portfolio_value * (1 + returns).cumprod()
     running_max = cumulative.cummax()
     drawdown = (cumulative - running_max) / running_max
@@ -104,7 +137,7 @@ def drawdown_analysis(returns, portfolio_value=10000):
 
 def monte_carlo_drawdown(returns, portfolio_value=10000, 
                          n_simulations=1000, n_days=252):
-    returns = returns.dropna()
+    returns = _clean_returns(returns, min_obs=3, name="a Monte Carlo simulation")
     nu, mu, sigma = t_dist.fit(returns)
     simulated_returns = t_dist.rvs(
         nu, mu, sigma, size=(n_days, n_simulations)
@@ -121,7 +154,7 @@ def monte_carlo_drawdown(returns, portfolio_value=10000,
     return np.array(max_drawdowns)
 
 def backtest_var(returns, window=252, confidence=0.99):
-    returns = returns.dropna()
+    returns = _clean_returns(returns, min_obs=window + 1, name="a VaR backtest")
     historical_violations = []
     t_violations = []
     historical_var_series = []

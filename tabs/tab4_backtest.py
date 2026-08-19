@@ -2,7 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from charts import plot_backtest, plot_stress_test
-from risk_engine import backtest_var, kupiec_test, basel_zone, stress_test
+from risk_engine import (
+    InsufficientDataError, backtest_var, kupiec_test, basel_zone, stress_test
+)
 
 
 def render(portfolio_ret, portfolio_value, confidence):
@@ -10,9 +12,17 @@ def render(portfolio_ret, portfolio_value, confidence):
     st.markdown('<div class="card-title">VaR Backtest</div>', unsafe_allow_html=True)
 
     with st.spinner("Running backtest — this may take a moment..."):
-        h_var_series, t_var_series, h_violations, t_violations = backtest_var(
-            portfolio_ret, confidence=confidence
-        )
+        try:
+            h_var_series, t_var_series, h_violations, t_violations = backtest_var(
+                portfolio_ret, confidence=confidence
+            )
+        except InsufficientDataError:
+            st.info(
+                f"The backtest needs more than 252 trading days of history; "
+                f"this portfolio has {len(portfolio_ret)}. Extend the start "
+                "date to run it."
+            )
+            return
 
     n = len(h_violations)
     h_count = int(h_violations.sum())
