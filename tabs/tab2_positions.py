@@ -3,6 +3,7 @@ import pandas as pd
 import yfinance as yf
 
 import theme
+import tickers as tickers_mod
 from charts import plot_correlation_matrix, plot_daily_returns
 from risk_engine import historical_var, t_var
 
@@ -57,7 +58,7 @@ def render(portfolio_ret, portfolio_value, weights, amounts,
 
         tc_col1, tc_col2 = st.columns(2)
         with tc_col1:
-            prop_ticker = st.text_input("Ticker", value="HSBA.L", key="tab2_ticker")
+            prop_ticker = tickers_mod.picker("Ticker", key="tab2_ticker")
         with tc_col2:
             prop_shares = st.number_input("Shares", min_value=0, value=100, step=10, key="tab2_shares")
 

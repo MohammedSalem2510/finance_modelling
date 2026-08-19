@@ -4,6 +4,7 @@ import numpy as np
 import yfinance as yf
 
 import theme
+import tickers as tickers_mod
 from risk_engine import (
     InsufficientDataError,
     fetch_data, compute_returns, compute_portfolio_returns,
@@ -36,13 +37,21 @@ with st.sidebar:
     tickers = []
     amounts = {}
 
+    # Every slot's picker must keep the other slots' custom symbols selectable,
+    # otherwise switching asset count would discard a typed-in ticker.
+    slot_keys = [f"ticker_{j}" for j in range(int(n_assets))]
+
     for i in range(int(n_assets)):
         st.markdown(f'<div class="asset-row">Asset {i+1}</div>', unsafe_allow_html=True)
         col1, col2 = st.columns([1.2, 1])
         with col1:
-            ticker = st.text_input("Ticker", value=["HSBA.L", "LLOY.L", "BARC.L", "BP.L", "VOD.L"][i], key=f"ticker_{i}")
+            ticker = tickers_mod.picker(
+                "Ticker", key=f"ticker_{i}", extra_keys=slot_keys
+            )
         with col2:
             amount = st.number_input("£ Amount", min_value=100, max_value=1000000, value=10000, step=500, key=f"amount_{i}")
+        if not ticker:
+            continue
         tickers.append(ticker)
         amounts[ticker] = amount
 
@@ -70,6 +79,10 @@ if run_button:
 
 if not st.session_state.get("analysis_run", False):
     st.info("Configure the portfolio in the sidebar, then run the analysis.")
+    st.stop()
+
+if not tickers:
+    st.error("Add at least one ticker in the sidebar to run the analysis.")
     st.stop()
 
 with st.spinner("Downloading price data..."):

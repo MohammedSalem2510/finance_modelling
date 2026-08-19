@@ -309,10 +309,12 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"
 .status-line b { color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* ---------------- inputs ---------------- */
-[data-testid="stSidebar"] input,
-[data-testid="stSidebar"] [data-baseweb="select"] > div,
-[data-testid="stSidebar"] [data-baseweb="input"],
-[data-testid="stSidebar"] [data-baseweb="base-input"] {
+/* Scoped app-wide, not just to the sidebar: ticker pickers appear in the main
+   area too and must look identical to the sidebar ones. */
+input,
+[data-baseweb="select"] > div,
+[data-baseweb="input"],
+[data-baseweb="base-input"] {
     background-color: var(--bg) !important;
     border-color: var(--border) !important;
     border-radius: var(--radius) !important;
@@ -320,22 +322,36 @@ html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"
     font-size: 12px !important;
     font-variant-numeric: tabular-nums;
 }
-[data-testid="stSidebar"] input:hover,
-[data-testid="stSidebar"] [data-baseweb="input"]:hover,
-[data-testid="stSidebar"] [data-baseweb="select"] > div:hover {
+input:hover,
+[data-baseweb="input"]:hover,
+[data-baseweb="select"] > div:hover {
     border-color: var(--border-strong) !important;
 }
-[data-testid="stSidebar"] input:focus,
-[data-testid="stSidebar"] [data-baseweb="input"]:focus-within {
+input:focus,
+[data-baseweb="input"]:focus-within {
     border-color: var(--blue) !important;
 }
-[data-testid="stSidebar"] [data-baseweb="select"] svg { fill: var(--muted) !important; }
-[data-testid="stSidebar"] .stNumberInput button {
+[data-baseweb="select"] svg { fill: var(--muted) !important; }
+.stNumberInput button {
     background-color: var(--surface-alt) !important;
     border-left: 1px solid var(--border) !important;
     color: var(--muted) !important;
 }
-[data-testid="stSidebar"] .stNumberInput button:hover { color: var(--text) !important; }
+.stNumberInput button:hover { color: var(--text) !important; }
+
+/* Dropdown menus render in a portal at the document root. Their surfaces
+   already come from the theme config; only the option rows need tightening to
+   match the app's dense 12px type. */
+[data-baseweb="popover"] li {
+    font-size: 12px !important;
+    color: var(--muted) !important;
+    font-variant-numeric: tabular-nums;
+}
+[data-baseweb="popover"] li:hover,
+[data-baseweb="popover"] li[aria-selected="true"] {
+    background-color: var(--bg) !important;
+    color: var(--text) !important;
+}
 
 .stButton button {
     background-color: var(--blue) !important;
